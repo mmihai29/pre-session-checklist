@@ -1,0 +1,109 @@
+tabs:
+  - id: tab1
+    title: "#1 Day Start [Narrative / KeyLevels - 1W]"
+    description: "Define all the closest (high probability) targets we want to achieve in the next 1 week."
+    sections:
+      - id: order_flow_targets
+        title: "Order Flow & Targets"
+        icon: "↕"
+        items:
+          - id: liquidity_sweeps_1w
+            label: "Identify Liquidity Sweeps on chart"
+            hint: "TV Chart: Select Trend Line and select 1W Sweep."
+          - id: fractals_1w
+            label: "Identify Fractals on chart"
+            hint: "TV Chart: Select Trend Line and select 1W SSL / 1W BSL."
+          - id: imbalances_1w
+            label: "Identify Imbalances on chart"
+            hint: "TV Chart: Select Rectangle and select (+ or -)1W FVG. Select Note and select Timeframe ff to indicate where is fulfill."
+          - id: snr_1w
+            label: "Identify SNR on chart if available"
+            hint: "TV Chart: Select Trend Line and select (+ or -)1W SNR."
+
+  - id: tab2
+    title: "#2 Day Start [KeyLevels - POI - 1D]"
+    description: "Define all variables below for the last several days."
+    sections:
+      - id: order_flow_1d
+        title: "Order Flow"
+        icon: "↕"
+        items:
+          - id: fractals_1d
+            label: "Identify Fractals on chart"
+            hint: "TV Chart: Select Trend Line and select 1D SSL / 1D BSL."
+          - id: liquidity_sweeps_1d
+            label: "Identify Liquidity Sweeps on chart"
+            hint: "TV Chart: Select Trend Line and select 1D Sweep."
+          - id: imbalances_1d
+            label: "Identify Imbalances on chart"
+            hint: "TV Chart: Select Rectangle and select (+ or -)1D FVG. Select Note and select Timeframe ff to indicate where is fulfill."
+          - id: dealing_range_1d
+            label: "Identify Dealing Range on chart if available"
+            hint: "TV Chart: Select Fib Retracement and select 1D Dealing Range."
+      - id: volume_confirmations_1d
+        title: "Volume Confirmations"
+        icon: "↕"
+        items:
+          - id: snr_1d
+            label: "Identify SNR on chart if available"
+            hint: "TV Chart: Select Trend Line and select (+ or -)1D SNR."
+          - id: rejection_block_1d
+            label: "Identify Rejection Block on chart if available"
+            hint: "TV Chart: Select Rectangle and select (+ or -)1D RB."
+          - id: sponsorship_candle_1d
+            label: "Identify Sponsorship Candle on chart if available"
+            hint: "TV Chart: Select Rectangle and select 1D SC."
+
+  - id: tab3
+    title: "#3 Day Start [ConfirmOF - Localisation - 4h]"
+    description: "Define the context and trend we are in. Select all the closest (high probability) liquidity raids, price rebalancing and POIs of interest to us to achieve in the next 2-5 days."
+    warning: "Identify Context based ONLY on information from the last ~2 days. Draw all lines until Wednesday."
+    sections:
+      - id: context_order_flow
+        title: "1. CONTEXT — Order Flow"
+        icon: "↕"
+        items:
+          - id: of_creation
+            label: "Identify OF Creation with confirmations"
+            hint: "TV Chart: Select Trend Line and select (+ or -)OF-1 Confirm, OF-2 Confirm, etc."
+          - id: liquidity_pools_4h
+            label: "Identify Liquidity Pools on chart if available"
+            hint: "TV Chart: Select Arc and mark zone."
+          - id: liquidity_targets_4h
+            label: "Identify Liquidity Targets — SSL & BSL"
+            hint: "TV Chart: Select Trend Line and select SSL / BSL."
+          - id: structure_4h
+            label: "Identify Structure (BOS & cBOS) on chart if available"
+            hint: "TV Chart: Select Trend Line and select 4h BOS & 4h cBOS."
+      - id: context_orderblocks_poi
+        title: "1. CONTEXT — Order Blocks & POI"
+        icon: "🪧"
+        items:
+          - id: snr_4h
+            label: "Identify SNR on chart if available"
+            hint: "TV Chart: Select Trend Line and select (+ or -)4h SNR."
+          - id: dealing_range_4h
+            label: "Identify Dealing Range on chart if available"
+            hint: "TV Chart: Select Fib Retracement and select 4h Dealing Range."
+          - id: dp_zones_4h
+            label: "Identify DP Zones on chart (+ or -) FVG / IFVG / BPR"
+            hint: "TV Chart: Select Rectangle and select (+ or -)FVG/IFVG/BPR. Select Note and select DP. Select Note and select Timeframe ff to indicate where is fulfill."
+          - id: rejection_block_4h
+            label: "Identify Rejection Block on chart if available"
+            hint: "TV Chart: Select Rectangle and select (+ or -)4h RB."
+          - id: sponsorship_candle_4h
+            label: "Identify Sponsorship Candle on chart if available"
+            hint: "TV Chart: Select Rectangle and select 4h SC."
+          - id: invalidation_4h
+            label: "Identify Invalidation on chart if available"
+            hint: "Fixing above or below an important / structure fractal. TV Chart: Select Trend Line / Note and select Invalidation."
+      - id: entry_actions
+        title: "2. ENTRY actions"
+        icon: "⬇"
+        items:
+          - id: triggers_entry_points
+            label: "Identify Triggers — Entry Points on chart on 1h Timeframe"
+            hint: "Identify triggers for today & yesterday: Fractals; FVG-Start → Trendline (FVG: Start); Volume Confirmations → SNR/FVG/IDM/Market; NO Volume Confirmations → IDM/Key Level/Market. TV Chart: Select Trend Line and select Entry-Long / Entry-Short. Set alerts to each trigger."
+          - id: fta
+            label: "Identify FTA on chart if available"
+            hint: "TV Chart: Select Trend Line and select FTA."
