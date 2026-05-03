@@ -1,168 +1,134 @@
-from datetime import date, datetime
+"""Home / landing page for the Forex Analysis Dashboard.
+
+The actual analytical workflow lives in the `pages/` folder — Streamlit
+auto-discovers them and renders the sidebar navigation.
+"""
+from datetime import datetime, timezone
 import streamlit as st
 
-from src import config, db
+from src import config, db, feeds
 
 st.set_page_config(
-    page_title="Pre-Session Checklist | Trading",
-    page_icon="📈",
+    page_title="Forex Analysis Dashboard",
+    page_icon="📊",
     layout="wide",
 )
 
-# ---------- init ----------
 db.init_db()
 TABS = config.load_checklists()
-TOTAL = config.total_items(TABS)
-
-
-def state_key(prefix: str, item_key: str) -> str:
-    return f"{prefix}::{item_key}"
-
-
-def on_change(session_id: int, item_key: str):
-    checked = st.session_state.get(state_key("chk", item_key), False)
-    note = st.session_state.get(state_key("note", item_key), "")
-    db.upsert_item(session_id, item_key, checked, note)
+TOTAL_ITEMS = config.total_items(TABS)
 
 
 # ---------- sidebar ----------
 with st.sidebar:
-    st.title("📈 Pre-Session")
-    st.caption("Trading checklist · 1W → 1D → 4h")
-
-    st.subheader("Sesiune curentă")
-    selected_date = st.date_input("Data", value=date.today(), format="YYYY-MM-DD")
-
-    pairs = db.list_pairs()
-    pair = st.selectbox("Pair", pairs, index=0 if pairs else None)
-
-    with st.expander("➕ Adaugă pair nou"):
-        new_pair = st.text_input("Simbol (ex: NZDUSD)", key="new_pair_input")
-        if st.button("Adaugă", use_container_width=True):
-            if new_pair.strip():
-                db.add_pair(new_pair)
-                st.rerun()
-
+    st.title("📊 Forex Dashboard")
+    st.caption("EURUSD · GER40")
     st.divider()
-
-    st.subheader("📚 Istoric sesiuni")
-    sessions = db.list_sessions(limit=30)
-    if not sessions:
-        st.caption("Nicio sesiune salvată încă.")
-    else:
-        for s in sessions:
-            done = s["done"]
-            total = TOTAL
-            pct = int((done / total) * 100) if total else 0
-            label = f"{s['date']} · {s['pair']} — {done}/{total} ({pct}%)"
-            if s["date"] == selected_date.isoformat() and s["pair"] == pair:
-                st.markdown(f"**▶ {label}**")
-            else:
-                st.caption(label)
+    st.markdown(
+        "Folosește meniul de mai sus pentru a naviga între:\n\n"
+        "- 📋 **Pre-Session** — checklist de analiză\n"
+        "- 📅 **Economic Calendar** — știri ForexFactory\n"
+        "- 📰 **News EURUSD** — FXStreet\n"
+        "- 📰 **News GER40** — FXStreet + macro EU"
+    )
 
 # ---------- main ----------
-session_id = db.get_or_create_session(selected_date, pair) if pair else None
+st.title("📊 Forex Analysis Dashboard")
+st.caption(f"Astăzi: {datetime.now().strftime('%A, %d %B %Y · %H:%M')}")
+st.divider()
 
-if not session_id:
-    st.warning("Adaugă cel puțin un pair în sidebar pentru a începe.")
-    st.stop()
+col1, col2 = st.columns(2)
 
-state = db.load_state(session_id)
+# --- Pre-Session preview ---
+with col1:
+    with st.container(border=True):
+        st.subheader("📋 Pre-Session Analysis")
+        sessions = db.list_sessions(limit=5)
+        if not sessions:
+            st.caption("Nicio sesiune încă. Deschide pagina **Pre-Session** ca să începi.")
+        else:
+            latest = sessions[0]
+            done = latest["done"]
+            pct = int((done / TOTAL_ITEMS) * 100) if TOTAL_ITEMS else 0
+            st.metric(
+                f"Ultima sesiune · {latest['pair']}",
+                f"{done}/{TOTAL_ITEMS}",
+                f"{pct}% complet",
+            )
+            st.caption(f"Data: {latest['date']}")
+            st.markdown("**Sesiuni recente:**")
+            for s in sessions[:5]:
+                d = s["done"]
+                p = int((d / TOTAL_ITEMS) * 100) if TOTAL_ITEMS else 0
+                st.caption(f"• {s['date']} · {s['pair']} — {d}/{TOTAL_ITEMS} ({p}%)")
+        st.page_link("pages/1_Pre_Session.py", label="Deschide Pre-Session →")
 
-# Prime session state from DB on first load per session
-prime_marker = f"primed::{session_id}"
-if not st.session_state.get(prime_marker):
-    for key in config.iter_item_keys(TABS):
-        s = state.get(key, {"checked": False, "note": ""})
-        st.session_state[state_key("chk", key)] = s["checked"]
-        st.session_state[state_key("note", key)] = s["note"]
-    st.session_state[prime_marker] = True
-
-# Header
-total_done = sum(1 for k in config.iter_item_keys(TABS) if state.get(k, {}).get("checked"))
-header_left, header_right = st.columns([3, 1])
-with header_left:
-    st.title("Pre-Session Checklist")
-    st.caption(
-        f"📅 {selected_date.strftime('%A, %d %B %Y')} · 💱 **{pair}** · "
-        f"Sesiunea #{session_id}"
-    )
-with header_right:
-    st.metric("Progres total", f"{total_done}/{TOTAL}")
-    st.progress(total_done / TOTAL if TOTAL else 0)
+# --- Calendar preview ---
+with col2:
+    with st.container(border=True):
+        st.subheader("📅 Economic Calendar")
+        try:
+            events = feeds.fetch_forexfactory_calendar()
+            high = feeds.filter_calendar(
+                events, currencies={"EUR", "USD"}, impacts={"high"}
+            )
+            if not high:
+                st.caption("Niciun eveniment High-impact (EUR/USD) în săptămâna curentă.")
+            else:
+                st.caption(f"**Top {min(5, len(high))} evenimente High-impact (EUR/USD):**")
+                for ev in high[:5]:
+                    st.markdown(
+                        f"{ev['impact_icon']} **{ev['currency']}** · "
+                        f"{ev['date']} {ev['time']} — {ev['title']}"
+                    )
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Calendarul nu a putut fi încărcat: {exc}")
+        st.page_link("pages/2_Economic_Calendar.py", label="Vezi tot calendarul →")
 
 st.divider()
 
-# Action buttons
-col_a, col_b, col_c = st.columns([1, 1, 4])
-with col_a:
-    if st.button("🔄 Reset sesiune", use_container_width=True):
-        db.reset_session(session_id)
-        st.session_state.pop(prime_marker, None)
-        st.rerun()
-with col_b:
-    older = [s for s in db.list_sessions(50) if s["id"] != session_id]
-    if older:
-        with st.popover("📋 Duplică din...", use_container_width=True):
-            options = {f"{s['date']} · {s['pair']}": s["id"] for s in older}
-            choice = st.selectbox("Sursă", list(options.keys()), key="dup_source")
-            if st.button("Copiază bifările", key="dup_btn"):
-                db.duplicate_session(options[choice], session_id)
-                st.session_state.pop(prime_marker, None)
-                st.rerun()
+col3, col4 = st.columns(2)
 
-# Tabs
-tab_objects = st.tabs([t["title"] for t in TABS])
+# --- EURUSD news preview ---
+with col3:
+    with st.container(border=True):
+        st.subheader("📰 News EURUSD")
+        try:
+            news = feeds.fetch_fxstreet_news()
+            eur = feeds.filter_news_by_keywords(
+                news, ["EURUSD", "EUR/USD", "EUR-USD", "Euro"]
+            )[:3]
+            if not eur:
+                st.caption("Niciun articol EURUSD în feed-ul curent.")
+            else:
+                for art in eur:
+                    st.markdown(f"**[{art['title']}]({art['link']})**")
+                    st.caption(f"_{art['published_human']}_")
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Feed-ul de știri nu a putut fi încărcat: {exc}")
+        st.page_link("pages/3_News_EURUSD.py", label="Toate știrile EURUSD →")
 
-for tab_obj, tab_def in zip(tab_objects, TABS):
-    with tab_obj:
-        if tab_def.get("description"):
-            st.markdown(f"_{tab_def['description']}_")
-        if tab_def.get("warning"):
-            st.warning(f"⚠ {tab_def['warning']}")
-
-        # Per-tab progress
-        tab_keys = config.tab_item_keys(tab_def)
-        tab_done = sum(1 for k in tab_keys if st.session_state.get(state_key("chk", k)))
-        tab_total = len(tab_keys)
-        st.caption(f"**Progres tab:** {tab_done}/{tab_total}")
-        st.progress(tab_done / tab_total if tab_total else 0)
-
-        st.markdown("##### Actions to do on Chart")
-
-        for section in tab_def.get("sections", []):
-            with st.container(border=True):
-                st.markdown(f"**{section.get('icon', '•')} {section['title']}**")
-                for idx, item in enumerate(section["items"], start=1):
-                    item_key = f"{tab_def['id']}.{section['id']}.{item['id']}"
-                    chk_k = state_key("chk", item_key)
-                    note_k = state_key("note", item_key)
-
-                    cols = st.columns([0.05, 0.55, 0.40])
-                    with cols[0]:
-                        st.checkbox(
-                            " ",
-                            key=chk_k,
-                            label_visibility="collapsed",
-                            on_change=on_change,
-                            args=(session_id, item_key),
-                        )
-                    with cols[1]:
-                        st.markdown(f"**{idx}. {item['label']}**")
-                        if item.get("hint"):
-                            st.caption(f"💡 {item['hint']}")
-                    with cols[2]:
-                        st.text_input(
-                            "Notă",
-                            key=note_k,
-                            label_visibility="collapsed",
-                            placeholder="ex: 1.0850 — 1W SSL",
-                            on_change=on_change,
-                            args=(session_id, item_key),
-                        )
+# --- GER40 news preview ---
+with col4:
+    with st.container(border=True):
+        st.subheader("📰 News GER40")
+        try:
+            news = feeds.fetch_fxstreet_news()
+            dax = feeds.filter_news_by_keywords(
+                news, ["DAX", "GER40", "DE40", "German"]
+            )[:3]
+            if not dax:
+                st.caption("Niciun articol DAX/GER40 în feed-ul curent.")
+            else:
+                for art in dax:
+                    st.markdown(f"**[{art['title']}]({art['link']})**")
+                    st.caption(f"_{art['published_human']}_")
+        except Exception as exc:  # noqa: BLE001
+            st.warning(f"Feed-ul de știri nu a putut fi încărcat: {exc}")
+        st.page_link("pages/4_News_GER40.py", label="Toate știrile GER40 →")
 
 st.divider()
 st.caption(
-    f"💾 Salvare automată în SQLite local · Ultima actualizare: "
-    f"{datetime.now().strftime('%H:%M:%S')}"
+    "💾 Date local-only (SQLite) · 📡 Surse externe: ForexFactory RSS, FXStreet RSS, "
+    "Investing.com RSS · Cache 5 min"
 )
