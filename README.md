@@ -1,41 +1,63 @@
-# Pre-Session Checklist — Trading Forex
+# Forex Analysis Dashboard
 
-Dashboard local cu checklist pre-sesiune pentru analiză de trading (1W → 1D → 4h),
-cu istoric per zi + pair, notițe scurte și auto-save în SQLite.
+Multi-page Streamlit dashboard pentru analiza Forex (EURUSD, GER40), cu:
 
-## Rulare
+- 📋 **Pre-Session Checklist** — analiză 1W → 1D → 4h, sesiuni per dată + pair, auto-save
+- 📅 **Economic Calendar** — ForexFactory JSON feed cu filtre (currencies + impact)
+- 📰 **News EURUSD** — FXStreet RSS, filtrat pe articole EUR/USD
+- 📰 **News GER40** — FXStreet (DAX) + Investing.com Europa (context macro)
 
-1. (Opțional) Creează un virtualenv:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate          # Windows
+Backend de date **dual-mode**: SQLite local (default) sau Postgres remote (când `DATABASE_URL` e setat).
+
+## Rulare locală
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+Browserul se deschide la `http://localhost:8501`. Datele sunt în `data/sessions.db`.
+
+Există și un shortcut: dublu-click pe **"Pre-Session Checklist"** de pe Desktop (sau pe `start_app.bat`).
+
+## Deploy pe Streamlit Cloud (PWA pe telefon)
+
+### Pas 1 — Bază de date persistentă
+
+Pe Streamlit Cloud filesystem-ul e efemer; SQLite local s-ar reseta la fiecare restart. Foloseste un Postgres gratuit (Supabase sau Neon).
+
+**Supabase (recomandat, mai simplu):**
+1. Cont la https://supabase.com → New project (alege regiunea cea mai apropiată).
+2. După ce e gata: Settings → Database → **Connection string** → copiază `URI` (form: `postgresql://postgres:[YOUR-PASSWORD]@db.xxx.supabase.co:5432/postgres`).
+3. Înlocuiește `[YOUR-PASSWORD]` cu parola pe care ai pus-o la creare.
+
+**Neon (alternativă):**
+1. Cont la https://neon.tech → New project.
+2. Copiază connection string-ul direct din dashboard.
+
+### Pas 2 — Deploy pe Streamlit Cloud
+
+1. Mergi la https://share.streamlit.io → Sign in with GitHub.
+2. **New app** → repository: `mmihai29/pre-session-checklist`, branch: `main`, main file: `app.py`.
+3. Click **Advanced settings** → **Secrets** → lipește:
+   ```toml
+   DATABASE_URL = "postgresql://...stringul-tau..."
    ```
+4. Click **Deploy**. În 2-3 min ai un URL `https://<nume>.streamlit.app`.
 
-2. Instalează dependențele:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Pas 3 — Instalează ca PWA pe telefon
 
-3. Pornește app-ul:
-   ```bash
-   streamlit run app.py
-   ```
+1. Deschide URL-ul app-ului în Chrome (Android) sau Safari (iOS).
+2. Meniu (⋮ / share) → **Add to Home Screen** / **Install app**.
+3. Apare ca aplicație nativă, fullscreen, fără bara browser.
 
-   Browserul se va deschide automat la `http://localhost:8501`.
+### Limitarea accesului (opțional)
 
-## Cum se folosește
-
-1. În sidebar alegi **data** și **pair-ul** → se creează automat o sesiune.
-2. Bifezi fiecare item pe măsură ce îl marchezi pe chart-ul TradingView.
-3. Adaugi opțional o notă scurtă (ex: `1.0850 — 1W SSL`).
-4. Totul se salvează automat. Poți închide browserul oricând.
-5. Schimbi data/pair-ul → încarci/creezi altă sesiune.
-6. Istoricul ultimelor sesiuni e vizibil în sidebar cu progres %.
-7. **Duplică din...** copiază bifările/notele dintr-o sesiune anterioară (util pentru același pair la zile diferite).
+În Streamlit Cloud → app → **Settings** → **Sharing** → "Allow only specific emails" → adaugă emailul tău. Apoi doar tu te poți autentifica.
 
 ## Personalizare checklist
 
-Edită `checklists.yaml`. Structura:
+Editează [`checklists.yaml`](checklists.yaml). Structura:
 
 ```yaml
 tabs:
@@ -50,22 +72,31 @@ tabs:
             hint: "..."
 ```
 
-⚠ **Important**: dacă schimbi `id`-ul unui item, istoricul pentru acel item se pierde (cheia devine alta). Schimbă liber `label` și `hint` — acelea sunt doar prezentare.
+⚠ **Important**: dacă schimbi `id`-ul unui item, istoricul pentru acel item se pierde (cheia devine alta). Schimbă liber `label` și `hint`.
 
 ## Structură fișiere
 
 ```
 .
-├── app.py              # UI Streamlit
-├── checklists.yaml     # definiția tab-urilor & itemilor
+├── app.py                          # Home (preview cards)
+├── checklists.yaml                 # definiția checklist-urilor
 ├── requirements.txt
-├── data/sessions.db    # creat automat la prima rulare
+├── start_app.bat                   # Windows shortcut helper
+├── .streamlit/
+│   └── secrets.toml.example        # template pentru DATABASE_URL
+├── pages/
+│   ├── 1_Pre_Session.py
+│   ├── 2_Economic_Calendar.py
+│   ├── 3_News_EURUSD.py
+│   └── 4_News_GER40.py
 └── src/
-    ├── config.py       # loader YAML
-    └── db.py           # SQLite CRUD
+    ├── config.py                   # YAML loader
+    ├── db.py                       # SQLite / Postgres dual-mode
+    └── feeds.py                    # ForexFactory + FXStreet + Investing fetchers
 ```
 
-## Date și backup
+## Backend & date
 
-Toate datele sunt în `data/sessions.db`. Pentru backup, copiază acel fișier.
-Pentru reset complet, șterge-l (sau șterge folder-ul `data/`).
+- Toate fetcher-ele cache 5 min (`@st.cache_data(ttl=300)`).
+- ForexFactory are un disk-cache fallback — dacă feed-ul răspunde 429 (rate limit), pagina afișează ultimul snapshot bun cu o notă "stale".
+- DB local: `data/sessions.db`. Pentru backup, copiază acel fișier. Reset complet: șterge folder-ul `data/`.
