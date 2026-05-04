@@ -129,6 +129,6 @@ with col4:
 
 st.divider()
 st.caption(
-    "💾 Date local-only (SQLite) · 📡 Surse externe: ForexFactory RSS, FXStreet RSS, "
+    f"💾 {db.backend_info()} · 📡 Surse externe: ForexFactory RSS, FXStreet RSS, "
     "Investing.com RSS · Cache 5 min"
 )
