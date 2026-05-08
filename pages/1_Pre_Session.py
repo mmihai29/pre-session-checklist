@@ -166,7 +166,7 @@ for section in tab_def.get("sections", []):
             item_key = f"{tab_def['id']}.{section['id']}.{item['id']}"
             chk_k = state_key("chk", item_key)
 
-            cols = st.columns([0.12, 0.88])
+            cols = st.columns([1, 12], gap="small")
             with cols[0]:
                 st.checkbox(
                     " ",
